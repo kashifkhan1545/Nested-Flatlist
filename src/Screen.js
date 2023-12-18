@@ -1,8 +1,14 @@
-import React, { useState } from 'react';
+// src/Screen.js
+
+import React from 'react';
 import { SafeAreaView, FlatList, Text, View, TouchableOpacity, StyleSheet } from 'react-native';
+import { useDispatch, useSelector } from 'react-redux';
+import { setExpandedItems } from './slices/dataSlice';
 
 const Screen = () => {
-    const [expandedItems, setExpandedItems] = useState([]);
+  const dispatch = useDispatch();
+  const expandedItems = useSelector((state) => state.data.expandedItems);
+
 
     const data = [
         {
@@ -150,98 +156,130 @@ const Screen = () => {
         },
     ];
 
-    const toggleItem = (itemId) => {
-        setExpandedItems((prevExpandedItems) => {
-            if (prevExpandedItems.includes(itemId)) {
-                return prevExpandedItems.filter((id) => id !== itemId);
-            } else {
-                return [...prevExpandedItems, itemId];
-            }
-        });
+    const toggleItem = (itemId, subItems) => {
+      const isItemExpanded = expandedItems.includes(itemId);
+    
+      // If the item is already expanded, collapse it; otherwise, expand it
+      const payload = isItemExpanded ? [] : [itemId];
+    
+      // If the item is not expanded and has subitems, expand all subitems
+      if (!isItemExpanded && subItems && subItems.length > 0) {
+        const subItemIds = subItems.map((subItem) => subItem.id);
+        payload.push(...subItemIds);
+      }
+    
+      dispatch(setExpandedItems(payload));
     };
+    
 
-    const renderItems = ({ item }) => (
-        
-        <View style={styles.itemContainer}>
-            <TouchableOpacity onPress={() => toggleItem(item.id)}>
-                <Text style={styles.itemText}>{item.title}</Text>
-            </TouchableOpacity>
-            {expandedItems.includes(item.id) && item.subItems.length > 0 && (
-                <FlatList
-                    data={item.subItems}
-                    keyExtractor={(subItem) => subItem.id.toString()}
-                    renderItem={renderSubItems}
-                />
-            )}
-        </View>
+    
+  
+    const expandAllSubitems = (itemId, subItems) => {
+      const itemIdsToExpand = [];
+  
+      const traverseSubitems = (items) => {
+        items.forEach((item) => {
+          itemIdsToExpand.push(item.id);
+          if (item.subItems.length > 0) {
+            traverseSubitems(item.subItems);
+          }
+        });
+      };
+  
+      traverseSubitems(subItems);
+  
+      dispatch(setExpandedItems(itemIdsToExpand));
+    };
+  
+    const renderItems = ({ item: parentItem }) => (
+      
+      <View style={styles.itemContainer}>
+        <TouchableOpacity onPress={() => toggleItem(parentItem.id, parentItem.subItems)}>
+          <Text style={[styles.itemText, { color: expandedItems.includes(parentItem.id) ? 'black' : '#3498DB' }]}>
+            {parentItem.title}
+          </Text>
+        </TouchableOpacity>
+        {expandedItems.includes(parentItem.id) && parentItem.subItems.length > 0 && (
+          <View style={styles.subItemContainer}>
+            <FlatList
+              data={parentItem.subItems}
+              keyExtractor={(subItem) => subItem.id.toString()}
+              renderItem={({ item: subItem }) => renderSubItem(subItem)}
+            />
+          </View>
+        )}
+      </View>
     );
-
-    const renderSubItems = ({ item }) => (
-        <View style={styles.subItemContainer}>
-            <TouchableOpacity onPress={() => toggleItem(item.id)}>
-                <Text style={styles.subItemText}>{item.title}</Text>
-            </TouchableOpacity>
-            {expandedItems.includes(item.id) && item.subItems.length > 0 && (
-                <FlatList
-                    data={item.subItems}
-                    keyExtractor={(subItem) => subItem.id.toString()}
-                    renderItem={renderSubItems}
-                />
-            )}
-        </View>
+    
+  
+    const renderSubItem = (subItem) => (
+      <View style={styles.subItemContainer}>
+        <TouchableOpacity onPress={() => toggleItem(subItem.id, subItem.subItems)}>
+          <Text style={styles.subItemText}>{subItem.title}</Text>
+        </TouchableOpacity>
+        {expandedItems.includes(subItem.id) && subItem.subItems.length > 0 && (
+          <View style={styles.subItemContainer}>
+            <FlatList
+              data={subItem.subItems}
+              keyExtractor={(subItem) => subItem.id.toString()}
+              renderItem={({ item: nestedSubItem }) => renderSubItem(nestedSubItem)}
+            />
+          </View>
+        )}
+      </View>
     );
-
+    
+  
     return (
-       
-        <SafeAreaView style={styles.container}>
-            <View style={styles.contentContainer}>
-            <Text style={styles.additionalText}>Nested FlatList</Text>
-                <FlatList
-                    data={data}
-                    keyExtractor={(item) => item.id.toString()}
-                    renderItem={renderItems} 
-                />
-            </View>
-        </SafeAreaView>
+      <SafeAreaView style={styles.container}>
+        <View style={styles.contentContainer}>
+          <Text style={styles.additionalText}>Nested FlatList Using Redux</Text>
+          <FlatList
+            data={data}
+            keyExtractor={(item) => item.id.toString()}
+            renderItem={renderItems}
+          />
+        </View>
+      </SafeAreaView>
     );
-};
-
-const styles = StyleSheet.create({
+  };
+  
+  const styles = StyleSheet.create({
     container: {
-        flex: 1,
-        backgroundColor: '#F5F5F5', 
+      flex: 1,
+      backgroundColor: '#F5F5F5',
     },
     contentContainer: {
-        flex: 1,
-        padding: 10,
+      flex: 1,
+      padding: 10,
     },
     itemContainer: {
-        marginLeft: 20,
-        marginBottom: 5,
-        backgroundColor: '#F5F5F5', 
+      marginLeft: 20,
+      marginBottom: 5,
+      backgroundColor: '#F5F5F5',
     },
     subItemContainer: {
-        marginLeft: 40, 
-        marginBottom: 5,
-        backgroundColor: '#ffff', 
+      marginLeft: 40,
+      marginBottom: 5,
+      backgroundColor: '#ffff',
     },
     itemText: {
-        fontSize: 22,
-        fontWeight: 'bold',
-        color: '#3498DB', 
+      fontSize: 22,
+      fontWeight: 'bold',
+      color: '#3498DB',
     },
     subItemText: {
-        fontSize: 17,
-        fontWeight: 'bold',
-        color: 'black', 
+      fontSize: 17,
+      fontWeight: 'bold',
+      color: 'black',
     },
     additionalText: {
-        fontSize: 24,
-        fontWeight: 'bold',
-        marginBottom: 10,
-        textAlign:'center',
-        color: 'black', 
+      fontSize: 24,
+      fontWeight: 'bold',
+      marginBottom: 10,
+      textAlign: 'center',
+      color: 'black',
     },
-});
-
-export default Screen;
+  });
+  
+  export default Screen;
