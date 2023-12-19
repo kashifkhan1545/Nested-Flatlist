@@ -1,285 +1,179 @@
 // src/Screen.js
-
-import React from 'react';
-import { SafeAreaView, FlatList, Text, View, TouchableOpacity, StyleSheet } from 'react-native';
-import { useDispatch, useSelector } from 'react-redux';
-import { setExpandedItems } from './slices/dataSlice';
+import React, { useState } from 'react';
+import {
+  View,
+  Text,
+  FlatList,
+  TouchableOpacity,
+  StyleSheet,
+  Modal,
+  TextInput,
+  Button,
+} from 'react-native';
+import { useSelector, useDispatch } from 'react-redux';
+import { setExpandedItems, addData } from './slices/dataSlice';
 
 const Screen = () => {
-  const dispatch = useDispatch();
+  const data = useSelector((state) => state.data.data);
   const expandedItems = useSelector((state) => state.data.expandedItems);
+  const dispatch = useDispatch();
 
+  // State to manage modal visibility, entered text, and selected item
+  const [isModalVisible, setModalVisible] = useState(false);
+  const [enteredText, setEnteredText] = useState('');
+  const [selectedItemId, setSelectedItemId] = useState(null);
 
-    const data = [
-        {
-            "id": 1,
-            "title": "Item 1",
-            "subItems": [
-                {
-                    "id": 11,
-                    "title": "Subitem 1.1",
-                    "subItems": [
-                        {
-                            "id": 111,
-                            "title": "Subitem 1.1.1",
-                            "subItems": []
-                        },
-                        {
-                            "id": 112,
-                            "title": "Subitem 1.1.2",
-                            "subItems": []
-                        }
-                    ]
-                },
-                {
-                    "id": 12,
-                    "title": "Subitem 1.2",
-                    "subItems": []
-                }
-            ]
-        },
-        {
-            "id": 2,
-            "title": "Item 2",
-            "subItems": [
-                {
-                    "id": 21,
-                    "title": "Subitem 2.1",
-                    "subItems": [
-                        {
-                            "id": 35, 
-                            "title": "Subitem 2.1.1",
-                            "subItems": []
-                        },
-                        {
-                            "id": 36, 
-                            "title": "Subitem 2.1.2",
-                            "subItems": []
-                        }
-                    ]
-                },
-                {
-                    "id": 22,
-                    "title": "Subitem 2.2",
-                    "subItems": []
-                }
-            ]
-        },
-        {
-            "id": 3,
-            "title": "Item 3",
-            "subItems": [
+  const handleCloseModal = () => {
+    setModalVisible(false);
+    setSelectedItemId(null);
+  };
 
-                {
-                    "id": 25,
-                    "title": "Subitem 3.1",
-                    "subItems": []
-                }
-            ]
-        },
+  const handleSaveModal = () => {
+    if (enteredText.trim() !== '' && selectedItemId !== null) {
+      // Dispatch action to add data to the selected item
+      dispatch(addData({ id: selectedItemId, text: enteredText }));
 
-        {
-            "id": 10,
-            "title": "Item 4",
-            "subItems": [
+      // Close the modal
+      handleCloseModal();
+    }
+  };
 
-                {
-                    "id": 29,
-                    "title": "Subitem 4.1",
-                    "subItems": [
-                        {
-                            "id": 30,
-                            "title": "Subitem 4.1.1",
-                            "subItems": []
-                        }
+  const handleItemClick = (itemId) => {
+    const isItemExpanded = expandedItems.includes(itemId);
+    const updatedExpandedItems = isItemExpanded
+      ? expandedItems.filter((id) => id !== itemId)
+      : [...expandedItems, itemId];
 
-                    ]
-                }
-            ]
-        },
-        {
-            "id": 15,
-            "title": "Item 5",
-            "subItems": [
+    dispatch(setExpandedItems(updatedExpandedItems));
+  };
 
-                {
-                    "id": 29,
-                    "title": "Subitem 5.1",
-                    "subItems": [
-                        {
-                            "id": 30,
-                            "title": "Subitem 5.1.1",
-                            "subItems": []
-                        }
-
-                    ]
-                }
-            ]
-        },
-        {
-            "id": 27,
-            "title": "Item 6",
-            "subItems": [
-
-                {
-                    "id": 29,
-                    "title": "Subitem 6.1",
-                    "subItems": [
-                        {
-                            "id": 30,
-                            "title": "Subitem 6.1.1",
-                            "subItems": []
-                        }
-
-                    ]
-                }
-            ]
-        },
-        {
-            "id": 13,
-            "title": "Item 7",
-            "subItems": [
-
-                {
-                    "id": 63,
-                    "title": "Subitem 7.1",
-                    "subItems": [
-                        {
-                            "id": 50,
-                            "title": "Subitem 7.1.1",
-                            "subItems": []
-                        }
-
-                    ]
-                }
-            ]
-        },
-    ];
-
-    const toggleItem = (itemId, subItems) => {
-      const isItemExpanded = expandedItems.includes(itemId);
-    
-      // If the item is already expanded, collapse it; otherwise, expand it
-      const payload = isItemExpanded ? [] : [itemId];
-    
-      // If the item is not expanded and has subitems, expand all subitems
-      if (!isItemExpanded && subItems && subItems.length > 0) {
-        const subItemIds = subItems.map((subItem) => subItem.id);
-        payload.push(...subItemIds);
-      }
-    
-      dispatch(setExpandedItems(payload));
-    };
-    
-
-    
-  
-    const expandAllSubitems = (itemId, subItems) => {
-      const itemIdsToExpand = [];
-  
-      const traverseSubitems = (items) => {
-        items.forEach((item) => {
-          itemIdsToExpand.push(item.id);
-          if (item.subItems.length > 0) {
-            traverseSubitems(item.subItems);
-          }
-        });
-      };
-  
-      traverseSubitems(subItems);
-  
-      dispatch(setExpandedItems(itemIdsToExpand));
-    };
-  
-    const renderItems = ({ item: parentItem }) => (
-      
-      <View style={styles.itemContainer}>
-        <TouchableOpacity onPress={() => toggleItem(parentItem.id, parentItem.subItems)}>
-          <Text style={[styles.itemText, { color: expandedItems.includes(parentItem.id) ? 'black' : '#3498DB' }]}>
-            {parentItem.title}
-          </Text>
-        </TouchableOpacity>
-        {expandedItems.includes(parentItem.id) && parentItem.subItems.length > 0 && (
-          <View style={styles.subItemContainer}>
-            <FlatList
-              data={parentItem.subItems}
-              keyExtractor={(subItem) => subItem.id.toString()}
-              renderItem={({ item: subItem }) => renderSubItem(subItem)}
-            />
-          </View>
-        )}
-      </View>
-    );
-    
-  
-    const renderSubItem = (subItem) => (
-      <View style={styles.subItemContainer}>
-        <TouchableOpacity onPress={() => toggleItem(subItem.id, subItem.subItems)}>
-          <Text style={styles.subItemText}>{subItem.title}</Text>
-        </TouchableOpacity>
-        {expandedItems.includes(subItem.id) && subItem.subItems.length > 0 && (
-          <View style={styles.subItemContainer}>
-            <FlatList
-              data={subItem.subItems}
-              keyExtractor={(subItem) => subItem.id.toString()}
-              renderItem={({ item: nestedSubItem }) => renderSubItem(nestedSubItem)}
-            />
-          </View>
-        )}
-      </View>
-    );
-    
+  const renderItem = ({ item }) => {
+    const isItemExpanded = expandedItems.includes(item.id);
   
     return (
-      <SafeAreaView style={styles.container}>
-        <View style={styles.contentContainer}>
-          <Text style={styles.additionalText}>Nested FlatList Using Redux</Text>
+      <View style={[styles.itemContainer, isItemExpanded && styles.expandedItem]}>
+        <TouchableOpacity onPress={() => handleItemClick(item.id)}>
+          <Text style={styles.itemText}>{item.title}</Text>
+        </TouchableOpacity>
+  
+        {/* Add button for each main item */}
+        <TouchableOpacity
+          onPress={() => {
+            setSelectedItemId(item.id);
+            setModalVisible(true);
+          }}
+          style={styles.addButton}
+        >
+          <Text style={styles.addButtonText}>Add</Text>
+        </TouchableOpacity>
+  
+        {isItemExpanded && item.subItems.length > 0 && (
           <FlatList
-            data={data}
-            keyExtractor={(item) => item.id.toString()}
-            renderItem={renderItems}
+            data={item.subItems}
+            keyExtractor={(subItem) => subItem.id.toString()}
+            renderItem={({ item: subItem }) => renderItem({ item: subItem })}
+            style={styles.subItemList}
           />
-        </View>
-      </SafeAreaView>
+        )}
+      </View>
     );
   };
-  
-  const styles = StyleSheet.create({
-    container: {
-      flex: 1,
-      backgroundColor: '#F5F5F5',
-    },
-    contentContainer: {
-      flex: 1,
-      padding: 10,
-    },
-    itemContainer: {
-      marginLeft: 20,
-      marginBottom: 5,
-      backgroundColor: '#F5F5F5',
-    },
-    subItemContainer: {
-      marginLeft: 40,
-      marginBottom: 5,
-      backgroundColor: '#ffff',
-    },
-    itemText: {
-      fontSize: 22,
-      fontWeight: 'bold',
-      color: '#3498DB',
-    },
-    subItemText: {
-      fontSize: 17,
-      fontWeight: 'bold',
-      color: 'black',
-    },
-    additionalText: {
-      fontSize: 24,
-      fontWeight: 'bold',
-      marginBottom: 10,
-      textAlign: 'center',
-      color: 'black',
-    },
-  });
-  
-  export default Screen;
+  return (
+    <View style={styles.container}>
+      <Text style={styles.headerText}>FlatList With Redux</Text>
+
+      {/* MainList */}
+      <FlatList
+        data={data}
+        keyExtractor={(item) => item.id.toString()}
+        renderItem={renderItem}
+        style={styles.mainList}
+      />
+
+      {/* Modal */}
+      <Modal visible={isModalVisible} animationType="slide">
+        <View style={styles.modalContainer}>
+          <TextInput
+            style={styles.modalTextInput}
+            placeholder="Enter text..."
+            onChangeText={(text) => setEnteredText(text)}
+          />
+          <View style={styles.modalButtonContainer}>
+            <Button title="Save" onPress={handleSaveModal} />
+            <Button title="Close" onPress={handleCloseModal} />
+          </View>
+        </View>
+      </Modal>
+    </View>
+  );
+};
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  headerText: {
+    fontSize: 22,
+    fontWeight: 'bold',
+    marginTop: 10,
+    color:'black',
+  },
+  mainList: {
+    alignSelf: 'center', 
+    marginTop: 20, 
+    width: 260,
+  },
+  itemContainer: {
+    padding: 10,
+    margin: 5,
+    backgroundColor: '#3498db', // Main item color
+    borderRadius: 5,
+  },
+  expandedItem: {
+    backgroundColor: '#2ecc71', // Subitem color
+  },
+  itemText: {
+    color: 'white',
+  },
+  subItemList: {
+    marginLeft: 10,
+    marginTop:15, // Indent subitems
+  },
+  addButton: {
+    position: 'absolute',
+    top: 0,
+    right: 0,
+    backgroundColor: 'green',
+    padding: 10,
+    borderRadius: 5,
+  },
+  addButtonText: {
+    color: 'white',
+  },
+
+  // Modal styles
+  modalContainer: {
+    top:80,
+    width: '80%',
+    height:'30%',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth:1,
+    left:38,
+  },
+  modalTextInput: {
+    borderWidth:1,
+    marginBottom: 20,
+    width: 200,
+    borderRadius:18,
+  },
+  modalButtonContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    width: '80%',
+  },
+});
+
+export default Screen;
