@@ -6,6 +6,7 @@ import { NavigationContainer } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
 import store, { persistor } from './store/store';
 import Screen from './Screen';
+import NestedScreen from './NestedScreen';
 
 const Stack = createStackNavigator();
 
@@ -16,7 +17,8 @@ const App = () => {
         <NavigationContainer>
           <Stack.Navigator initialRouteName="Main">
             <Stack.Screen name="Main" component={Screen} />
-            <Stack.Screen name="Screen" component={Screen} />
+            <Stack.Screen name="Nested" component={NestedScreen}
+             options={{ headerShown: false }} />
           </Stack.Navigator>
         </NavigationContainer>
       </PersistGate>
