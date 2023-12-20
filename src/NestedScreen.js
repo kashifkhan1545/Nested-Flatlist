@@ -1,15 +1,13 @@
-// src/Screen.js
+// src/NestedScreen.js
 import React, { useState } from 'react';
 import { View, Text, FlatList, TouchableOpacity, StyleSheet, Modal, TextInput, Button } from 'react-native';
 import { useSelector, useDispatch } from 'react-redux';
 import { addData, deleteItem } from './slices/dataSlice';
-import { useNavigation } from '@react-navigation/native';
 
-const Screen = () => {
-  const data = useSelector((state) => state.data.data);
-  const expandedItems = useSelector((state) => state.data.expandedItems);
+const NestedScreen = ({ route }) => {
+  const { itemId } = route.params;
   const dispatch = useDispatch();
-  const navigation = useNavigation();
+  const item = useSelector((state) => state.data.data.find((mainItem) => mainItem.id === itemId));
 
   const [isModalVisible, setModalVisible] = useState(false);
   const [enteredText, setEnteredText] = useState('');
@@ -18,69 +16,71 @@ const Screen = () => {
     dispatch(deleteItem(itemId));
   };
 
-  const handleItemClick = (itemId) => {
-    navigation.navigate('Nested', { itemId });
-  };
-
-  const handleOpenModal = () => {
-    setModalVisible(true);
-  };
-
   const handleCloseModal = () => {
     setModalVisible(false);
-    setEnteredText('');
   };
 
   const handleSaveModal = () => {
     if (enteredText.trim() !== '') {
-      // Dispatch the action to add data to the main flatlist
-      dispatch(addData({ id: null, text: enteredText }));
+      dispatch(addData({ id: itemId, text: enteredText }));
     }
     handleCloseModal();
   };
 
-  const renderItem = ({ item }) => {
-    const isItemExpanded = expandedItems.includes(item.id);
-
+  const renderNestedItem = ({ item, index }) => {
     return (
-      <View style={[styles.itemContainer, isItemExpanded && styles.expandedItem]}>
-        <TouchableOpacity onPress={() => handleItemClick(item.id)}>
-          <Text style={styles.itemText}>{item.title}</Text>
-        </TouchableOpacity>
+      <View style={styles.nestedItemContainer}>
+        <View style={styles.itemContainer}>
+          <TouchableOpacity onPress={() => {}}>
+            <Text style={styles.itemText}>{item.title}</Text>
+          </TouchableOpacity>
 
-        <TouchableOpacity onPress={() => handleDeleteItem(item.id)} style={styles.deleteButton}>
-          <Text style={styles.deleteButtonText}>Del</Text>
-        </TouchableOpacity>
+          <View style={styles.buttonsContainer}>
+            <TouchableOpacity
+              onPress={() => handleDeleteItem(item.id)}
+              style={styles.deleteButton}
+            >
+              <Text style={styles.deleteButtonText}>Del</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
 
-        {isItemExpanded && item.subItems.length > 0 && (
-          <FlatList
-            data={item.subItems}
-            keyExtractor={(subItem) => subItem.id.toString()}
-            renderItem={({ item: subItem }) => <Text>{subItem.title}</Text>}
-            style={styles.subItemList}
-          />
-        )}
+        {item.subItems && item.subItems.length > 0 && renderNestedSubitems(item.subItems)}
+      </View>
+    );
+  };
+
+  const renderNestedSubitems = (subitems) => {
+    return (
+      <View style={styles.nestedSubitemsContainer}>
+        <FlatList
+          data={subitems}
+          keyExtractor={(subItem) => subItem.id.toString()}
+          renderItem={renderNestedItem}
+          style={styles.mainList}
+        />
       </View>
     );
   };
 
   return (
     <View style={styles.container}>
-      <Text style={styles.headerText}>FlatList With Redux</Text>
-
+      <Text style={styles.headerText}>Subitems</Text>
       <View style={styles.addButtonContainer}>
-        <TouchableOpacity onPress={handleOpenModal} style={styles.addButton}>
+        {/* Add button below the text "subitems" */}
+        <TouchableOpacity onPress={() => setModalVisible(true)} style={styles.addButton}>
           <Text style={styles.addButtonText}>Add</Text>
         </TouchableOpacity>
       </View>
-
+      {/* Nested FlatList */}
       <FlatList
-        data={data}
-        keyExtractor={(item) => item.id.toString()}
-        renderItem={renderItem}
+        data={item.subItems}
+        keyExtractor={(subItem) => subItem.id.toString()}
+        renderItem={renderNestedItem}
         style={styles.mainList}
       />
 
+      {/* Modal */}
       <Modal visible={isModalVisible} animationType="slide" transparent={true}>
         <View style={styles.modalContainer}>
           <View style={styles.modalContent}>
@@ -105,6 +105,7 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+    top: 140,
   },
   headerText: {
     fontSize: 22,
@@ -120,26 +121,25 @@ const styles = StyleSheet.create({
   itemContainer: {
     padding: 6,
     margin: 5,
-    backgroundColor: '#3498db', // Main item color
+    backgroundColor: '#3498db',
     borderRadius: 5,
     flexDirection: 'row',
     justifyContent: 'space-between',
   },
-  expandedItem: {
-    backgroundColor: '#2ecc71', // Subitem color
+  nestedItemContainer: {
+    marginLeft: 5,
+  },
+  nestedSubitemsContainer: {
+    marginLeft: -5,
   },
   itemText: {
     color: 'white',
   },
-  subItemList: {
-    marginLeft: -7,
-    marginTop: 15, // Indent subitems
-  },
   deleteButton: {
-    backgroundColor: 'red', // Change the color as desired
+    backgroundColor: 'red',
     padding: 10,
     borderRadius: 5,
-    marginLeft: 85,
+    marginRight: 6,
   },
   deleteButtonText: {
     color: 'white',
@@ -148,12 +148,15 @@ const styles = StyleSheet.create({
     backgroundColor: 'green',
     padding: 10,
     borderRadius: 5,
-    width: 250, // Increase the width as needed
-    marginTop:10,
+    width:240,
+    
   },
   addButtonText: {
     color: 'white',
     textAlign:'center',
+  },
+  buttonsContainer: {
+    flexDirection: 'row',
   },
   modalContainer: {
     flex: 1,
@@ -177,6 +180,10 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-around',
   },
+  addButtonContainer: {
+    alignItems: 'center',
+    marginTop: 10,
+  },
 });
 
-export default Screen;
+export default NestedScreen;
