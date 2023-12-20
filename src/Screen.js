@@ -1,88 +1,79 @@
 // src/Screen.js
 import React, { useState } from 'react';
-import {
-  View,
-  Text,
-  FlatList,
-  TouchableOpacity,
-  StyleSheet,
-  Modal,
-  TextInput,
-  Button,
-} from 'react-native';
+import { View, Text, FlatList, TouchableOpacity, StyleSheet, Modal, TextInput, Button } from 'react-native';
 import { useSelector, useDispatch } from 'react-redux';
-import { setExpandedItems, addData } from './slices/dataSlice';
+import { addData, deleteItem } from './slices/dataSlice';
+import { useNavigation } from '@react-navigation/native';
 
 const Screen = () => {
   const data = useSelector((state) => state.data.data);
   const expandedItems = useSelector((state) => state.data.expandedItems);
   const dispatch = useDispatch();
+  const navigation = useNavigation();
 
-  // State to manage modal visibility, entered text, and selected item
   const [isModalVisible, setModalVisible] = useState(false);
   const [enteredText, setEnteredText] = useState('');
-  const [selectedItemId, setSelectedItemId] = useState(null);
 
-  const handleCloseModal = () => {
-    setModalVisible(false);
-    setSelectedItemId(null);
-  };
-
-  const handleSaveModal = () => {
-    if (enteredText.trim() !== '' && selectedItemId !== null) {
-      // Dispatch action to add data to the selected item
-      dispatch(addData({ id: selectedItemId, text: enteredText }));
-
-      // Close the modal
-      handleCloseModal();
-    }
+  const handleDeleteItem = (itemId) => {
+    dispatch(deleteItem(itemId));
   };
 
   const handleItemClick = (itemId) => {
-    const isItemExpanded = expandedItems.includes(itemId);
-    const updatedExpandedItems = isItemExpanded
-      ? expandedItems.filter((id) => id !== itemId)
-      : [...expandedItems, itemId];
+    navigation.navigate('Nested', { itemId });
+  };
 
-    dispatch(setExpandedItems(updatedExpandedItems));
+  const handleOpenModal = () => {
+    setModalVisible(true);
+  };
+
+  const handleCloseModal = () => {
+    setModalVisible(false);
+    setEnteredText('');
+  };
+
+  const handleSaveModal = () => {
+    if (enteredText.trim() !== '') {
+      // Dispatch the action to add data to the main flatlist
+      dispatch(addData({ id: null, text: enteredText }));
+    }
+    handleCloseModal();
   };
 
   const renderItem = ({ item }) => {
     const isItemExpanded = expandedItems.includes(item.id);
-  
+
     return (
       <View style={[styles.itemContainer, isItemExpanded && styles.expandedItem]}>
         <TouchableOpacity onPress={() => handleItemClick(item.id)}>
           <Text style={styles.itemText}>{item.title}</Text>
         </TouchableOpacity>
-  
-        {/* Add button for each main item */}
-        <TouchableOpacity
-          onPress={() => {
-            setSelectedItemId(item.id);
-            setModalVisible(true);
-          }}
-          style={styles.addButton}
-        >
-          <Text style={styles.addButtonText}>Add</Text>
+
+        <TouchableOpacity onPress={() => handleDeleteItem(item.id)} style={styles.deleteButton}>
+          <Text style={styles.deleteButtonText}>Del</Text>
         </TouchableOpacity>
-  
+
         {isItemExpanded && item.subItems.length > 0 && (
           <FlatList
             data={item.subItems}
             keyExtractor={(subItem) => subItem.id.toString()}
-            renderItem={({ item: subItem }) => renderItem({ item: subItem })}
+            renderItem={({ item: subItem }) => <Text>{subItem.title}</Text>}
             style={styles.subItemList}
           />
         )}
       </View>
     );
   };
+
   return (
     <View style={styles.container}>
       <Text style={styles.headerText}>FlatList With Redux</Text>
 
-      {/* MainList */}
+      <View style={styles.addButtonContainer}>
+        <TouchableOpacity onPress={handleOpenModal} style={styles.addButton}>
+          <Text style={styles.addButtonText}>Add</Text>
+        </TouchableOpacity>
+      </View>
+
       <FlatList
         data={data}
         keyExtractor={(item) => item.id.toString()}
@@ -90,17 +81,18 @@ const Screen = () => {
         style={styles.mainList}
       />
 
-      {/* Modal */}
-      <Modal visible={isModalVisible} animationType="slide">
+      <Modal visible={isModalVisible} animationType="slide" transparent={true}>
         <View style={styles.modalContainer}>
-          <TextInput
-            style={styles.modalTextInput}
-            placeholder="Enter text..."
-            onChangeText={(text) => setEnteredText(text)}
-          />
-          <View style={styles.modalButtonContainer}>
-            <Button title="Save" onPress={handleSaveModal} />
-            <Button title="Close" onPress={handleCloseModal} />
+          <View style={styles.modalContent}>
+            <TextInput
+              style={styles.modalTextInput}
+              placeholder="Enter text..."
+              onChangeText={(text) => setEnteredText(text)}
+            />
+            <View style={styles.modalButtonContainer}>
+              <Button title="Save" onPress={handleSaveModal} />
+              <Button title="Close" onPress={handleCloseModal} />
+            </View>
           </View>
         </View>
       </Modal>
@@ -118,18 +110,20 @@ const styles = StyleSheet.create({
     fontSize: 22,
     fontWeight: 'bold',
     marginTop: 10,
-    color:'black',
+    color: 'black',
   },
   mainList: {
-    alignSelf: 'center', 
-    marginTop: 20, 
+    alignSelf: 'center',
+    marginTop: 20,
     width: 260,
   },
   itemContainer: {
-    padding: 10,
+    padding: 6,
     margin: 5,
     backgroundColor: '#3498db', // Main item color
     borderRadius: 5,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
   },
   expandedItem: {
     backgroundColor: '#2ecc71', // Subitem color
@@ -138,41 +132,50 @@ const styles = StyleSheet.create({
     color: 'white',
   },
   subItemList: {
-    marginLeft: 10,
-    marginTop:15, // Indent subitems
+    marginLeft: -7,
+    marginTop: 15, // Indent subitems
+  },
+  deleteButton: {
+    backgroundColor: 'red', // Change the color as desired
+    padding: 10,
+    borderRadius: 5,
+    marginLeft: 85,
+  },
+  deleteButtonText: {
+    color: 'white',
   },
   addButton: {
-    position: 'absolute',
-    top: 0,
-    right: 0,
     backgroundColor: 'green',
     padding: 10,
     borderRadius: 5,
+    width: 250, // Increase the width as needed
+    marginTop:10,
   },
   addButtonText: {
     color: 'white',
+    textAlign:'center',
   },
-
-  // Modal styles
   modalContainer: {
-    top:80,
-    width: '80%',
-    height:'30%',
+    flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    borderWidth:1,
-    left:38,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+  },
+  modalContent: {
+    backgroundColor: 'white',
+    padding: 20,
+    borderRadius: 10,
+    width: '80%',
   },
   modalTextInput: {
-    borderWidth:1,
+    borderWidth: 1,
     marginBottom: 20,
-    width: 200,
-    borderRadius:18,
+    padding: 10,
+    borderRadius: 5,
   },
   modalButtonContainer: {
     flexDirection: 'row',
     justifyContent: 'space-around',
-    width: '80%',
   },
 });
 

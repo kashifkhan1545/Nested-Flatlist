@@ -11,63 +11,63 @@ const initialState = {
       "title": "Item 1",
       "subItems": [
           {
-              "id": 11,
+              "id": 2,
               "title": "Subitem 1.1",
               
               "subItems": [
                   {
-                      "id": 111,
+                      "id": 3,
                       "title": "Subitem 1.1.1",
                       "subItems": []
                   },
                   {
-                      "id": 112,
+                      "id": 4,
                       "title": "Subitem 1.1.2",
                       "subItems": []
                   }
               ]
           },
           {
-              "id": 12,
+              "id": 5,
               "title": "Subitem 1.2",
               "subItems": []
           }
       ]
   },
   {
-      "id": 2,
+      "id": 6,
       "title": "Item 2",
       "subItems": [
           {
-              "id": 21,
+              "id": 7,
               "title": "Subitem 2.1",
               "subItems": [
                   {
-                      "id": 51, 
+                      "id": 8, 
                       "title": "Subitem 2.1.1",
                       "subItems": []
                   },
                   {
-                      "id": 36, 
+                      "id": 9, 
                       "title": "Subitem 2.1.2",
                       "subItems": []
                   }
               ]
           },
           {
-              "id": 22,
+              "id": 10,
               "title": "Subitem 2.2",
               "subItems": []
           }
       ]
   },
   {
-      "id": 3,
+      "id": 11,
       "title": "Item 3",
       "subItems": [
 
           {
-              "id": 25,
+              "id": 12,
               "title": "Subitem 3.1",
               "subItems": []
           }
@@ -75,16 +75,16 @@ const initialState = {
   },
 
   {
-      "id": 10,
+      "id": 13,
       "title": "Item 4",
       "subItems": [
 
           {
-              "id": 37,
+              "id": 14,
               "title": "Subitem 4.1",
               "subItems": [
                   {
-                      "id": 54,
+                      "id": 15,
                       "title": "Subitem 4.1.1",
                       "subItems": []
                   }
@@ -94,16 +94,16 @@ const initialState = {
       ]
   },
   {
-    "id": 100,
+    "id": 16,
     "title": "Item 5",
     "subItems": [
 
         {
-            "id": 87,
+            "id": 17,
             "title": "Subitem 5.1",
             "subItems": [
                 {
-                    "id": 91,
+                    "id": 18,
                     "title": "Subitem 5.1.1",
                     "subItems": []
                 }
@@ -113,16 +113,16 @@ const initialState = {
     ]
 },
   {
-      "id": 27,
+      "id": 19,
       "title": "Item 6",
       "subItems": [
 
           {
-              "id": 77,
+              "id": 20,
               "title": "Subitem 6.1",
               "subItems": [
                   {
-                      "id": 99,
+                      "id": 21,
                       "title": "Subitem 6.1.1",
                       "subItems": []
                   }
@@ -132,16 +132,16 @@ const initialState = {
       ]
   },
   {
-      "id": 213,
+      "id": 22,
       "title": "Item 7",
       "subItems": [
 
           {
-              "id": 63,
+              "id": 23,
               "title": "Subitem 7.1",
               "subItems": [
                   {
-                      "id": 50,
+                      "id": 24,
                       "title": "Subitem 7.1.1",
                       "subItems": []
                   }
@@ -150,6 +150,25 @@ const initialState = {
           }
       ]
   },
+  {
+    "id": 25,
+    "title": "Item 8",
+    "subItems": [
+
+        {
+            "id": 26,
+            "title": "Subitem 8.1",
+            "subItems": [
+                {
+                    "id": 27,
+                    "title": "Subitem 8.1.1",
+                    "subItems": []
+                }
+
+            ]
+        }
+    ]
+},
   ],
 };
 
@@ -166,21 +185,44 @@ const dataSlice = createSlice({
       },
       addData: (state, action) => {
         const { id, text } = action.payload;
-        const itemToUpdate = findItemById(state.data, id);
+        
+       
+        if (id === null) {
+          state.data.push({ id: state.data.length + 1, title: text, subItems: [] });
+        } else {
+          
+          const itemToUpdate = findItemById(state.data, id);
   
-        if (itemToUpdate) {
-          // Ensure that the subItems array is initialized
-          if (!itemToUpdate.subItems) {
-            itemToUpdate.subItems = [];
+          if (itemToUpdate) {
+            if (!itemToUpdate.subItems) {
+              itemToUpdate.subItems = [];
+            }
+  
+            itemToUpdate.subItems.push({ title: text, id: generateUniqueId(), subItems: [] });
           }
-  
-          // Add the entered text to the selected item's subItems
-          itemToUpdate.subItems.push({ title: text, id: generateUniqueId(), subItems: [] });
         }
+      },
+      deleteItem: (state, action) => {
+        const itemId = action.payload;
+        const updatedData = deleteItemById(state.data, itemId);
+        state.data = updatedData;
       },
     },
   });
-  // Utility function to find an item by ID in the hierarchical data structure
+
+ 
+const deleteItemById = (data, id) => {
+    return data.reduce((acc, item) => {
+      if (item.id === id) {
+        return acc;
+      }
+  
+      const updatedSubItems = deleteItemById(item.subItems || [], id);
+  
+      return [...acc, { ...item, subItems: updatedSubItems }];
+    }, []);
+  };
+ 
   const findItemById = (data, id) => {
     for (const item of data) {
       if (item.id === id) {
@@ -196,10 +238,10 @@ const dataSlice = createSlice({
     return null;
   };
   
-  // Utility function to generate a unique ID (you can replace this with your preferred ID generation logic)
+  
   const generateUniqueId = () => {
     return Math.random().toString(36).substring(7);
   };
   
-  export const { setExpandedItems, addData } = dataSlice.actions;
+  export const { setExpandedItems, addData,deleteItem } = dataSlice.actions;
   export default dataSlice.reducer;
